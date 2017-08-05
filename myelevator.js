@@ -43,46 +43,13 @@
 
 Elevator.prototype.decide = function() {
     var simulator = Simulator.get_instance();
-    var building = simulator.get_building();
-    var num_floors = building.get_num_floors();
     var elevators = Simulator.get_instance().get_building().get_elevator_system().get_elevators();
-    var time_counter = simulator.get_time_counter();
     var requests = simulator.get_requests();
-    
     var elevator = this;
     var people = this.get_people();
-    var person = people.length > 0 ? people[0] : undefined;
     
-    // Cari lantai terdekat berdasarkan request dan people.get_destination_floor
-    var gap = 100;
-    var closest_floor = false;
-    var current_floor = elevator.at_floor();
-    var a = requests.concat(people.map(function(person){ return person.get_destination_floor() }));
-    a = a.filter(function(v, i, a){ return a.indexOf(v) == i; })
-    
-    for(var i=0, l=a.length; i<l; i++) {
-        if (gap > Math.abs(current_floor-a[i])) {
-            gap = Math.abs(current_floor-a[i]);
-            closest_floor = a[i];
-        }
-    }
-
-    if (closest_floor !== false) {
-        return this.commit_decision(closest_floor);
-    }
-
-    if(elevator) {
-        elevator.at_floor();
-        elevator.get_destination_floor();
-        elevator.get_position();
-    }
-    
-    if(person) {
-        person.get_floor();
-        return this.commit_decision(person.get_destination_floor());
-    }
-    
-    // APABILA ADA REQUEST KE FLOOR TERTENTU YANG BELUM DIHANDLE
+    // Handle request yang belum diambil elevator lain
+    var unhandled_requests = [];
     for(var i = 0;i < requests.length;i++) {
         var handled = false;
         for(var j = 0;j < elevators.length;j++) {
@@ -92,8 +59,27 @@ Elevator.prototype.decide = function() {
             }
         }
         if(!handled) {
-            return this.commit_decision(requests[i]);
+            unhandled_requests.push(requests[i]);
         }
+    }
+
+    // Cari lantai terdekat berdasarkan request dan people.get_destination_floor
+    var gap = 100;
+    var closest_floor = false;
+    var current_floor = elevator.at_floor();
+    var people_destination = people.map(function(person){ return person.get_destination_floor() });
+    var elevator_queue = people_destination.concat(unhandled_requests);
+    elevator_queue = elevator_queue.filter(function(v, i, self){ return self.indexOf(v) == i; })
+    
+    for(var i=0, l=elevator_queue.length; i<l; i++) {
+        if (gap > Math.abs(current_floor - elevator_queue[i])) {
+            gap = Math.abs(current_floor - elevator_queue[i]);
+            closest_floor = elevator_queue[i];
+        }
+    }
+
+    if (closest_floor !== false) {
+        return this.commit_decision(closest_floor);
     }
 
     return this.commit_decision(1);
