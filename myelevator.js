@@ -53,6 +53,24 @@ Elevator.prototype.decide = function() {
     var people = this.get_people();
     var person = people.length > 0 ? people[0] : undefined;
     
+    // Cari lantai terdekat berdasarkan request dan people.get_destination_floor
+    var gap = 100;
+    var closest_floor = false;
+    var current_floor = elevator.at_floor();
+    var a = requests.concat(people.map(function(person){ return person.get_destination_floor() }));
+    a = a.filter(function(v, i, a){ return a.indexOf(v) == i; })
+    
+    for(var i=0, l=a.length; i<l; i++) {
+        if (gap > Math.abs(current_floor-a[i])) {
+            gap = Math.abs(current_floor-a[i]);
+            closest_floor = a[i];
+        }
+    }
+
+    if (closest_floor !== false) {
+        return this.commit_decision(closest_floor);
+    }
+
     if(elevator) {
         elevator.at_floor();
         elevator.get_destination_floor();
@@ -64,6 +82,7 @@ Elevator.prototype.decide = function() {
         return this.commit_decision(person.get_destination_floor());
     }
     
+    // APABILA ADA REQUEST KE FLOOR TERTENTU YANG BELUM DIHANDLE
     for(var i = 0;i < requests.length;i++) {
         var handled = false;
         for(var j = 0;j < elevators.length;j++) {
@@ -77,5 +96,5 @@ Elevator.prototype.decide = function() {
         }
     }
 
-    return this.commit_decision(Math.floor(num_floors / 2));
+    return this.commit_decision(1);
 };
